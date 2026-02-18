@@ -1,0 +1,16 @@
+CompileFlags:
+  Add: [
+    "-Wno-unknown-warning-option",
+    "-Wno-unused-floating-point-types",
+    "-Wno-ignored-optimization-argument"
+  ]
+  Remove: [
+    "-mpreferred-stack-boundary=*",
+    "-mindirect-branch=*",
+    "-mindirect-branch-register",
+    "-fno-allow-store-data-races",
+    "-fzero-init-padding-bits=*",
+    "-fmin-function-alignment=*",
+    "-fconserve-stack",
+    "-mrecord-mcount",
+  ]
