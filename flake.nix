@@ -1,60 +1,47 @@
 {
-  inputs.kernelFlake.url = "github:jordanisaacs/kernel-module-flake";
+  description = "ARM Kernel Module Dev Lab";
+
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+  };
 
   outputs = {
     self,
     nixpkgs,
-    kernelFlake,
   }: let
     system = "x86_64-linux";
-    pkgs = nixpkgs.legacyPackages.${system};
 
-    kernelLib = kernelFlake.lib.builders {inherit pkgs;};
-    buildLib = kernelLib;
-    kernel = pkgs.linux_latest;
+    pkgs = import nixpkgs {inherit system;};
 
-    buildCModule = buildLib.buildCModule {inherit kernel;};
-
-    modules = [exampleModule];
-
-    initramfs = buildLib.buildInitramfs {
-      inherit kernel modules;
+    armPkgs = import nixpkgs {
+      inherit system;
+      crossSystem = {
+        config = "armv7l-unknown-linux-gnueabihf";
+      };
     };
-
-    exampleModule = buildCModule {
-      name = "hello-world";
-      src = ./.;
-    };
-
-    runQemu = buildLib.buildQemuCmd {inherit kernel initramfs;};
-    runGdb = buildLib.buildGdbCmd {inherit kernel modules;};
   in {
-    packages.${system} = {
-      default = exampleModule;
-      runvm = runQemu;
-      rungdb = runGdb;
-    };
-
-    apps.${system} = {
-      default = {
-        type = "app";
-        program = "${runQemu}/bin/run-vm";
-      };
-      debug = {
-        type = "app";
-        program = "${runGdb}/bin/run-gdb";
-      };
-    };
-
     devShells.${system}.default = pkgs.mkShell {
-      inputsFrom = [exampleModule];
       nativeBuildInputs = with pkgs; [
+        qemu
+        ncurses
+        flex
+        bison
+        bc
+        elfutils
+        openssl
+        cpio
         gnumake
+        perl
         pahole
-        bear
+
+        armPkgs.stdenv.cc
       ];
+
       shellHook = ''
-        export KDIR="${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
+        export ARCH=arm
+        export CROSS_COMPILE=armv7l-unknown-linux-gnueabihf-
+        echo "ARM Kernel Module Lab Ready ✔"
+        alias kmake='make ARCH=arm CROSS_COMPILE=$CROSS_COMPILE'
       '';
     };
   };

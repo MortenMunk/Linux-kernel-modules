@@ -58,3 +58,4 @@ dkms.conf
 .direnv/
 compile_commands.json
 .cache/
+kernel/
