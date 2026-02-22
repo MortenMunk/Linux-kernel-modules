@@ -42,7 +42,6 @@
         mount -t sysfs none /sys
         mkdir -p /mnt
         mount -t 9p -o trans=virtio hostshare /mnt
-        echo "🚀 AArch64 Lab Ready. Modules in /mnt"
         exec /bin/sh
         EOF
 
