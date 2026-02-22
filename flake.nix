@@ -1,5 +1,5 @@
 {
-  description = "ARM Kernel Module Dev Lab - FHS Compatible";
+  description = "ARM Kernel Module Dev Lab - Fully Automated";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -17,8 +17,29 @@
       crossSystem = {config = "armv7l-unknown-linux-gnueabihf";};
     };
 
+    kernel-version = "5.10.1";
     kernel-prefix = "5";
-    kernel-version = "${kernel-prefix}.10.1";
+
+    rootfs =
+      pkgs.runCommand "rootfs.cpio.gz" {
+        nativeBuildInputs = with pkgs; [cpio gzip];
+      } ''
+        mkdir -p rootfs/{bin,dev,proc,sys,mnt}
+        cp ${armPkgs.pkgsStatic.busybox}/bin/busybox rootfs/bin/sh
+
+        cat <<EOF > rootfs/init
+        #!/bin/sh
+        mount -t proc none /proc
+        mount -t sysfs none /sys
+        mkdir -p /mnt
+        mount -t 9p -o trans=virtio hostshare /mnt
+        exec /bin/sh
+        EOF
+
+        chmod +x rootfs/init
+        cd rootfs
+        find . | cpio -o -H newc | gzip > $out
+      '';
 
     fhs = pkgs.buildFHSEnv {
       name = "kernel-build-env";
@@ -46,7 +67,7 @@
       echo "Downloading Kernel v${kernel-version}..."
       curl -L https://cdn.kernel.org/pub/linux/kernel/v${kernel-prefix}.x/linux-${kernel-version}.tar.xz | tar -xJ
       mv linux-${kernel-version} kernel
-      echo "Done! Run: cd kernel && kmake versatile_defconfig && kmake -j$(nproc)"
+      echo "Done! Run: cd kernel && kmake versatile_defconfig && kmake -j\$(nproc)"
     '';
 
     kmake = pkgs.writeScriptBin "kmake" ''
@@ -59,7 +80,7 @@
       qemu-system-arm -M versatilepb \
         -kernel $KDIR/arch/arm/boot/zImage \
         -dtb $KDIR/arch/arm/boot/dts/versatile-pb.dtb \
-        -initrd rootfs.cpio.gz \
+        -initrd ${rootfs} \
         -append "console=ttyAMA0 root=/dev/ram0" \
         -serial stdio -display none \
         --virtfs local,path=$PWD/exercises,mount_tag=hostshare,security_model=none,id=hostshare
@@ -73,11 +94,9 @@
         qemu
         gdb
         ncurses
-
         get-kernel
         kmake
         run-qemu
-
         armPkgs.stdenv.cc
       ];
 
@@ -89,7 +108,9 @@
         echo "Commands: get-kernel, kmake, run-qemu"
 
         if [ ! -d "$KDIR" ]; then
-          echo "⚠️  Kernel source not detected in ./kernel. Run 'get-kernel' to start."
+          echo "Kernel source not detected in ./kernel. Run 'get-kernel' to start."
+        else
+           echo "Kernel source detected at $KDIR"
         fi
       '';
     };
