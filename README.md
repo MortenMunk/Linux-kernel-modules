@@ -15,15 +15,16 @@ The version can be changed in the flake.
 
 ```bash
 cd kernel
-kmake versatile_defconfig
+kmake defconfig
 ```
 
 ### Build kernel and device tree
 
 ```bash
 kmake -j${nproc}
-kmake versatile-pb.dtb
 ```
+
+If you get OOM error, you can use something like `-j4` for a 8bg or 16gb RAM system.
 
 ### Compile modules
 
@@ -47,7 +48,7 @@ run-qemu
 Replace `hello-world` for below with whatever module you want to load
 
 ```bash
-cd /mnt/hello-world
+cd /mnt/modules/hello-world
 insmod main.ko
 ```
 
